@@ -68,6 +68,7 @@ async def receive_meeting(request: Request):
 
 @app.get("/{email}")
 async def login(email: str, request: Request):
+    print('kuy')
     return {"message": "เข้าสู่ระบบสำเร็จ! คุณสามารถกลับไปใช้งาน LINE Bot ได้แล้ว"}
 
 if __name__ == "__main__":

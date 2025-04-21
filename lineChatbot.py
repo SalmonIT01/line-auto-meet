@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from pydantic import BaseModel
 
+from urllib.parse import quote
 from linebot import LineBotApi, WebhookHandler
 
 from linebot.models import (
@@ -703,9 +704,9 @@ def handle_postback(event):
                 TextSendMessage(text="ไม่พบอีเมลที่ต้องการเพิ่ม กรุณาลองใหม่อีกครั้ง")
             )
             return
-        
+        encoded_email = quote(email)
         # Create Google API URL (FastAPI endpoint)
-        api_url = f"https://0bf4-49-228-96-87.ngrok-free.app/{email}"
+        api_url = f"https://0bf4-49-228-96-87.ngrok-free.app/{encoded_email}"
         
         print(api_url)
         # Tell user they'll be redirected
