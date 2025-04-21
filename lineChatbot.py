@@ -14,6 +14,8 @@ from linebot.models import (
     PostbackEvent
 )
 
+import requests
+
 from test import send_post
 
 # LINE API configuration
@@ -50,11 +52,6 @@ user_schedules = {
 # Mock user data (in production, fetch from database)
 available_users = ["panupongpr3841@gmail.com", "panupongnu4@gmail.com"]
 
-# Map LINE user ID to email (ในโปรดักชันควรใช้ฐานข้อมูล)
-user_emails = {}
-
-
-
 # Model for meeting creation result
 class MeetingResult(BaseModel):
     user_emails: List[str]
@@ -65,9 +62,19 @@ class MeetingResult(BaseModel):
     end_time: str
     attendees: List[Any] = []
 
-# Helper functions
 
-
+def add_user_email(email):
+    """Add a new user email to the available users list."""
+    # For production, this should update a database
+    if email not in available_users:
+        available_users.append(email)
+        return True
+    return False
+def validate_email(email):
+    """Simple email validation."""
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
 def parse_time_range(time_range: str) -> tuple:
     """Parse time range string (e.g., '13:00 - 14:00') into start and end times."""
     try:
@@ -125,10 +132,6 @@ def generate_date_range(start_date: str, end_date: str) -> List[str]:
     
     return date_range
 
-def is_logged_in(user_id):
-    """Check if user is logged in."""
-    return user_id in user_emails
-
 def create_login_message():
     """Create the main menu message."""
     return TextSendMessage(
@@ -139,66 +142,6 @@ def create_login_message():
         ])
     )
 
-
-def create_email_confirmation_message(user_id, email):
-    """Create an email confirmation message with buttons."""
-    login_url = f"https://localhost/{email}"  # แก้ไข URL ตามที่คุณใช้จริง
-    
-    return FlexSendMessage(
-        alt_text="ยืนยันอีเมล",
-        contents={
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "ยืนยันอีเมล",
-                        "weight": "bold",
-                        "size": "lg"
-                    },
-                    {
-                        "type": "text",
-                        "text": email,
-                        "margin": "md",
-                        "wrap": True
-                    },
-                    {
-                        "type": "text",
-                        "text": "คุณต้องการใช้อีเมลนี้เพื่อเข้าสู่ระบบหรือไม่?",
-                        "margin": "md",
-                        "size": "sm"
-                    }
-                ]
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "button",
-                        "style": "primary",
-                        "action": {
-                            "type": "uri",
-                            "label": "✅ ยืนยันอีเมลนี้",
-                            "uri": login_url
-                        }
-                    },
-                    {
-                        "type": "button",
-                        "action": {
-                            "type": "message",
-                            "label": "🔄 แก้ไขอีเมล",
-                            "text": "login"
-                        }
-                    }
-                ]
-            }
-        }
-    )
-
 def create_main_menu_message():
     """Create the main menu message."""
     return TextSendMessage(
@@ -206,6 +149,7 @@ def create_main_menu_message():
         quick_reply=QuickReply(items=[
             QuickReplyButton(action=MessageAction(label="🗓️ สร้างนัดประชุม", text="สร้างนัดประชุม")),
             QuickReplyButton(action=MessageAction(label="📋 ดูนัดประชุมที่มี", text="ดูนัดประชุมที่มี")),
+            QuickReplyButton(action=MessageAction(label="📧 เพิ่มอีเมลผู้ใช้", text="เพิ่มอีเมล")),
             QuickReplyButton(action=MessageAction(label="❓ วิธีใช้งาน", text="วิธีใช้งาน"))
         ])
     )
@@ -566,61 +510,116 @@ def handle_text_message(event):
     user_id = event.source.user_id
     text = event.message.text
 
+    
     # Initialize user session if not exists
     if user_id not in user_sessions:
-        user_sessions[user_id] = {"step": "not_logged_in"}
- 
- # Check login status
-    if not is_logged_in(user_id):
-        if text.lower() == "login":
-            user_sessions[user_id]["step"] = "entering_email"
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="กรุณากรอกอีเมลของคุณ:")
-            )
-        elif text.lower() == "วิธีใช้งาน":
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="คุณต้องเข้าสู่ระบบก่อนใช้งาน\nพิมพ์ 'login' เพื่อเข้าสู่ระบบด้วยอีเมลของคุณ")
-            )
-        elif user_sessions[user_id]["step"] == "entering_email":
-            # ผู้ใช้กรอกอีเมล
-            email = text.strip().lower()
-            
-            # ตรวจสอบรูปแบบอีเมลอย่างง่าย
-            if "@" in email and "." in email:
-                user_sessions[user_id]["temp_email"] = email
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    create_email_confirmation_message(user_id, email)
-                )
-            else:
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text="รูปแบบอีเมลไม่ถูกต้อง กรุณากรอกใหม่อีกครั้ง")
-                )
-        else:
-            line_bot_api.reply_message(
-                event.reply_token,
-                create_login_message()
-            )
-        return
-
-    # ตรงนี้จะทำงานต่อหลังจากผู้ใช้เข้าสู่ระบบแล้ว (จะมี HTTP request ส่งกลับมาจาก FastAPI หลังจากล็อกอินสำเร็จ)
-    # Main menu or trigger command
+        user_sessions[user_id] = {"step": "main_menu"}
+        
+        
+    if text.lower() == "เพิ่มอีเมล":
+        user_sessions[user_id] = {
+            "step": "enter_email",
+        }
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="กรุณากรอกอีเมลที่ต้องการเพิ่มเข้าระบบ:")
+        )
     
     # Main menu or trigger command
     if text.lower() == "นัดประชุม" or text.lower() == "สร้างนัดประชุม":
         user_sessions[user_id] = {
             "step": "enter_meeting_name",
-            "meeting_data": {
-                "creator_email": user_emails[user_id]  # บันทึกอีเมลของผู้สร้างการประชุม
-            }
+            "meeting_data": {}
         }
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="กรุณากรอกชื่อการประชุม:")
         )
+    
+     # Add this new condition for handling email input
+    elif user_sessions[user_id]["step"] == "enter_email":
+        # Save email and proceed to confirmation
+        email = text.strip()
+        # Validate email format
+        if not validate_email(email):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="รูปแบบอีเมลไม่ถูกต้อง กรุณากรอกอีเมลใหม่")
+            )
+            return
+        user_sessions[user_id]["email"] = email
+        user_sessions[user_id]["step"] = "confirm_email"
+        
+        
+        # Display confirmation message with buttons
+        line_bot_api.reply_message(
+            event.reply_token,
+            FlexSendMessage(
+                alt_text="ยืนยันการเพิ่มอีเมล",
+                contents={
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "ยืนยันการเพิ่มอีเมล",
+                                "weight": "bold",
+                                "size": "lg"
+                            },
+                            {
+                                "type": "text",
+                                "text": f"อีเมล: {email}",
+                                "margin": "md",
+                                "wrap": True
+                            },
+                            {
+                                "type": "text",
+                                "text": "คุณต้องการเพิ่มอีเมลนี้เข้าระบบใช่หรือไม่?",
+                                "margin": "md"
+                            }
+                        ]
+                    },
+                    "footer": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "postback",
+                                    "label": "✅ ยืนยัน",
+                                    "data": f"confirm_add_email_{user_id}"
+                                },
+                                "style": "primary"
+                            },
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "postback",
+                                    "label": "🔄 แก้ไขอีเมล",
+                                    "data": f"edit_email_{user_id}"
+                                },
+                                "style": "secondary",
+                                "margin": "md"
+                            },
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "postback",
+                                    "label": "❌ ยกเลิก",
+                                    "data": f"cancel_add_email_{user_id}"
+                                },
+                                "style": "secondary",
+                                "margin": "md"
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        add_user_email(email)
     
     # Handle user input based on current step
     elif user_sessions[user_id]["step"] == "enter_meeting_name":
@@ -694,6 +693,90 @@ def handle_postback(event):
     # Initialize user session if not exists
     if user_id not in user_sessions:
         user_sessions[user_id] = {"step": "main_menu"}
+    
+        # Handle email confirmation
+    if data.startswith("confirm_add_email_"):
+        email = user_sessions[user_id].get("email", "")
+        if not email:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="ไม่พบอีเมลที่ต้องการเพิ่ม กรุณาลองใหม่อีกครั้ง")
+            )
+            return
+        
+        # Create Google API URL (FastAPI endpoint)
+        api_url = f"https://0bf4-49-228-96-87.ngrok-free.app/{email}"
+        
+        print(api_url)
+        # Tell user they'll be redirected
+        line_bot_api.reply_message(
+            event.reply_token,
+            FlexSendMessage(
+                alt_text="เพิ่มอีเมลสำเร็จ",
+                contents={
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"อีเมล {email} ถูกเพิ่มแล้ว",
+                                "weight": "bold",
+                                "size": "lg",
+                                "wrap": True
+                            },
+                            {
+                                "type": "text",
+                                "text": "กรุณากดปุ่มด้านล่างเพื่อยืนยันการเข้าถึง Google Calendar",
+                                "margin": "md",
+                                "wrap": True
+                            }
+                        ]
+                    },
+                    "footer": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "action": {
+                                    "type": "uri",
+                                    "label": "🔗 ยืนยันผ่าน Google",
+                                    "uri": api_url
+                                }
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        # Reset user session
+        user_sessions[user_id] = {"step": "main_menu"}
+        
+    
+    # Handle email edit request
+    elif data.startswith("edit_email_"):
+        user_sessions[user_id]["step"] = "enter_email"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="กรุณากรอกอีเมลใหม่อีกครั้ง:")
+        )
+    
+    # Handle email cancellation
+    elif data.startswith("cancel_add_email_"):
+        # Reset user session
+        user_sessions[user_id] = {"step": "main_menu"}
+        
+        line_bot_api.reply_message(
+            event.reply_token,
+            [
+                TextSendMessage(text="❌ ยกเลิกการเพิ่มอีเมลเรียบร้อยแล้ว"),
+                create_main_menu_message()
+            ]
+        )
     
     # Handle date selection
     if data.startswith("start_date_"):
@@ -885,7 +968,7 @@ def handle_postback(event):
 
             ]
         )
-        threading.Thread(target=send_post, args=(meeting_result,)).start()
+        threading.Thread(target=send_post, args=(meeting_result,)).start() #send to fastapi
     
     # Handle meeting edit
     elif data.startswith("edit_meeting_"):

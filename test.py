@@ -86,6 +86,22 @@ def send_post(meeting_result):
     finally:
         print(f"⏱️ ใช้เวลา: {round(time.time() - start, 2)} วินาที")
 
+def send_get(email):
+    start = time.time()
+    try:
+        response = requests.get(
+            f"http://127.0.0.1:8000/events/{email}",
+            timeout=15
+        )
+        print(f"✅ GET สำเร็จ: {response.status_code}")
+        print(f"📡 URL: http://127.0.0.1:8000/events/{email}")
+        return response.json()
+    except Exception as e:
+        print(f"❌ GET ล้มเหลว: {str(e)}")
+        return {"error": str(e)}
+    finally:
+        print(f"⏱️ ใช้เวลา: {round(time.time() - start, 2)} วินาที")
+
 async def send_email(to_email: str, subject: str, body: str):
     message = EmailMessage()
     message["From"] = os.getenv("email")
