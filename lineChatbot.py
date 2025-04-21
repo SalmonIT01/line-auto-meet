@@ -196,12 +196,31 @@ def create_user_selection_flex_message(user_id):
     for i, email in enumerate(available_users):
         items.append({
             "type": "box",
-            "layout": "horizontal",
+            "layout": "vertical",
             "contents": [
                 {
-                    "type": "text",
-                    "text": email,
-                    "flex": 5
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "image",
+                            "url": "https://img.icons8.com/ios-filled/100/000000/user-male-circle.png",  # ใช้แทน icon รูปคน
+                            "size": "xs",
+                            "aspectMode": "cover",
+                            "aspectRatio": "1:1",
+                            "gravity": "center"
+                        },
+                        {
+                            "type": "text",
+                            "text": email,
+                            "wrap": True,
+                            "size": "sm",
+                            "color": "#333333",
+                            "margin": "md"
+                        }
+                    ],
+                    "spacing": "md",
+                    "alignItems": "center"
                 },
                 {
                     "type": "button",
@@ -211,12 +230,20 @@ def create_user_selection_flex_message(user_id):
                         "data": f"select_user_{user_id}_{email}"
                     },
                     "style": "primary",
-                    "flex": 2,
-                    "height": "sm"
+                    "height": "sm",
+                    "margin": "md",
+                    "color": "#00C16A"  # เขียวดูโปร ไม่แสบตา
                 }
             ],
-            "margin": "md"
+            "paddingAll": "12px",
+            "backgroundColor": "#FFFFFF",
+            "cornerRadius": "12px",
+            "margin": "sm",
+            "spacing": "sm",
+            "borderColor": "#DDDDDD",
+            "borderWidth": "1px"
         })
+
     
     return FlexSendMessage(
         alt_text="เลือกผู้เข้าร่วมประชุม",
@@ -253,10 +280,149 @@ def create_user_selection_flex_message(user_id):
         }
     )
 
+# def create_meeting_summary_flex_message(user_id, meeting_data):
+#     """Create a meeting summary flex message."""
+#     attendees_text = "\n".join([f"- {attendee}" for attendee in meeting_data["attendees"]])
+
+
+
+    
+#     return FlexSendMessage(
+#         alt_text="สรุปข้อมูลการนัดหมาย",
+#         contents={
+#             "type": "bubble",
+#             "body": {
+#                 "type": "box",
+#                 "layout": "vertical",
+#                 "contents": [
+#                     {
+#                         "type": "text",
+#                         "text": "📝 สรุปข้อมูลการนัดหมาย",
+#                         "weight": "bold",
+#                         "size": "lg"
+#                     },
+#                     {
+#                         "type": "box",
+#                         "layout": "vertical",
+#                         "margin": "lg",
+#                         "contents": [
+#                             {
+#                                 "type": "box",
+#                                 "layout": "baseline",
+#                                 "contents": [
+#                                     {
+#                                         "type": "text",
+#                                         "text": "📌 ชื่อ: ",
+#                                         "weight": "bold",
+#                                         "margin": "sm",
+#                                         "flex": 0
+#                                     },
+#                                     {
+#                                         "type": "text",
+#                                         "text": meeting_data["name"],
+#                                         "wrap": True,
+#                                         "flex": 5
+#                                     }
+#                                 ]
+#                             },
+#                             {
+#                                 "type": "box",
+#                                 "layout": "baseline",
+#                                 "contents": [
+#                                     {
+#                                         "type": "text",
+#                                         "text": "📆 วันที่: ",
+#                                         "weight": "bold",
+#                                         "margin": "sm",
+#                                         "flex": 0
+#                                     },
+#                                     {
+#                                         "type": "text",
+#                                         "text": meeting_data["date"],
+#                                         "wrap": True
+#                                     }
+#                                 ]
+#                             },
+#                             {
+#                                 "type": "box",
+#                                 "layout": "baseline",
+#                                 "contents": [
+#                                     {
+#                                         "type": "text",
+#                                         "text": "⏰ เวลา: ",
+#                                         "weight": "bold",
+#                                         "margin": "sm",
+#                                         "flex": 0
+#                                     },
+#                                     {
+#                                         "type": "text",
+#                                         "text": f"{meeting_data['start_time']} - {meeting_data['end_time']}",
+#                                         "wrap": True
+#                                     }
+#                                 ]
+#                             },
+#                             {
+#                                 "type": "box",
+#                                 "layout": "baseline",
+#                                 "contents": [
+#                                     {
+#                                         "type": "text",
+#                                         "text": "👥 ผู้เข้าร่วม: ",
+#                                         "weight": "bold",
+#                                         "margin": "sm",
+#                                         "flex": 0
+#                                     },
+#                                     {
+#                                         "type": "text",
+#                                         "text": attendees_text,
+#                                         "wrap": True
+#                                     }
+#                                 ]
+#                             }
+#                         ]
+#                     },
+#                     {
+#                         "type": "box",
+#                         "layout": "vertical",
+#                         "margin": "lg",
+#                         "spacing": "sm",
+#                         "contents": [
+#                             {
+#                                 "type": "button",
+#                                 "action": {
+#                                     "type": "postback",
+#                                     "label": "✅ ยืนยัน",
+#                                     "data": f"confirm_meeting_{user_id}"
+#                                 },
+#                                 "style": "primary"
+#                             },
+#                             {
+#                                 "type": "button",
+#                                 "action": {
+#                                     "type": "postback",
+#                                     "label": "🔄 แก้ไข",
+#                                     "data": f"edit_meeting_{user_id}"
+#                                 },
+#                                 "style": "secondary"
+#                             },
+#                             {
+#                                 "type": "button",
+#                                 "action": {
+#                                     "type": "postback",
+#                                     "label": "❌ ยกเลิก",
+#                                     "data": f"cancel_meeting_{user_id}"
+#                                 },
+#                                 "style": "secondary"
+#                             }
+#                         ]
+#                     }
+#                 ]
+#             }
+#         }
+#     )
 def create_meeting_summary_flex_message(user_id, meeting_data):
     """Create a meeting summary flex message."""
-    attendees_text = "\n".join(meeting_data["attendees"])
-    
+
     return FlexSendMessage(
         alt_text="สรุปข้อมูลการนัดหมาย",
         contents={
@@ -333,20 +499,24 @@ def create_meeting_summary_flex_message(user_id, meeting_data):
                             },
                             {
                                 "type": "box",
-                                "layout": "baseline",
+                                "layout": "vertical",
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": "👥 ผู้เข้าร่วม: ",
+                                        "text": "👥 ผู้เข้าร่วม:",
                                         "weight": "bold",
                                         "margin": "sm",
                                         "flex": 0
                                     },
-                                    {
-                                        "type": "text",
-                                        "text": attendees_text,
-                                        "wrap": True
-                                    }
+                                    *[
+                                        {
+                                            "type": "text",
+                                            "text": f"- {attendee}",
+                                            "wrap": True,
+                                            "margin": "sm"
+                                        }
+                                        for attendee in meeting_data["attendees"]
+                                    ]
                                 ]
                             }
                         ]
