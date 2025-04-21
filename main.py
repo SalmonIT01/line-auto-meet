@@ -1,18 +1,13 @@
-import os
-import json
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Union
-from pydantic import BaseModel
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
-from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-    FlexSendMessage, QuickReply, QuickReplyButton, MessageAction,
-    PostbackEvent, PostbackAction, DatetimePickerAction
-)
 from lineChatbot import *
+import aiosmtplib
+from email.message import EmailMessage
+from test import send_email, send_post
+
+
+
 
 app = FastAPI()
 
@@ -48,18 +43,32 @@ def get_user_meetings(user_id: str):
     # In production, fetch from database
     return {"user_id": user_id, "meetings": []}
 
-# @app.post("/create-meeting")
-# async def create_meeting(meeting: MeetingResult):
-#     """Create a meeting (mock endpoint for demonstration)"""
-#     # In production, save to database and integrate with calendar APIs
-#     return {"status": "success", "meeting": meeting.dict()}
 
 @app.post("/getmeeting")
 async def receive_meeting(request: Request):
     data = await request.json()
     print("📥 ได้รับข้อมูลจาก LINE BOT:", data)
-    return JSONResponse(content={"status": "received", "detail": "ได้รับข้อมูลเรียบร้อย"})
 
+    subject = f"นัดปลาชุมกันนน [ชื่อ : {data['summary']}]"
+    body = f"""📝 ข้อมูลการประชุม:
+
+📌 ชื่อ: {data['summary']}
+📆 วันที่: {data['start_time'].split('T')[0]}
+🕒 เวลา: {data['start_time'].split('T')[1][:5]} - {data['end_time'].split('T')[1][:5]}
+
+👥 ผู้เข้าร่วม:
+""" + "\n".join(f"- {email}" for email in data["user_emails"])
+
+    for email in data["user_emails"]:
+        await send_email(email, subject, body)
+
+    return JSONResponse(content={"status": "received", "detail": "ได้รับข้อมูลและส่งอีเมลแล้ว"})
+
+
+
+@app.get("/{email}")
+async def login(email: str, request: Request):
+    return {"message": "เข้าสู่ระบบสำเร็จ! คุณสามารถกลับไปใช้งาน LINE Bot ได้แล้ว"}
 
 if __name__ == "__main__":
     import uvicorn

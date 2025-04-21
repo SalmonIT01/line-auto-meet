@@ -1,9 +1,13 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Union, Any
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import List, Any
 from datetime import datetime
-import threading
 import requests
+import aiosmtplib
+from email.message import EmailMessage
+import os
+import time
+
 app = FastAPI()
 
 
@@ -67,13 +71,33 @@ async def parse_calendar(data: CalendarInput):
     return calendar_data
 
 def send_post(meeting_result):
+    start = time.time()
     try:
         response = requests.post(
             "http://127.0.0.1:8000/getmeeting",
             json=meeting_result.dict(),
             headers={"Content-Type": "application/json"},
-            timeout=3
+            timeout=15
         )
         print("✅ POST สำเร็จ:", response.status_code)
     except Exception as e:
         print("❌ POST ล้มเหลว:", str(e))
+        
+    finally:
+        print(f"⏱️ ใช้เวลา: {round(time.time() - start, 2)} วินาที")
+
+async def send_email(to_email: str, subject: str, body: str):
+    message = EmailMessage()
+    message["From"] = os.getenv("email")
+    message["To"] = to_email
+    message["Subject"] = subject
+    message.set_content(body)
+
+    await aiosmtplib.send(
+        message,
+        hostname="smtp.gmail.com",
+        port=587,
+        start_tls=True,
+        username= os.getenv("email"),
+        password= os.getenv("password")  # ใช้ App Password ถ้าใช้ Gmail
+    )
